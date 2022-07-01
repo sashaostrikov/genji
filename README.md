@@ -21,7 +21,7 @@ Checkout the [SQL documentation](https://genji.dev/docs/genji-sql), the [Go doc]
 
 > :warning: **Genji's API is still unstable**: Database compatibility is not guaranteed before reaching v1.0.0
 
-## Features
+## Features 
 
 -   **Optional schemas**: Genji tables are schemaless, but it is possible to add constraints on any field to ensure the coherence of data within a table.
 -   **On-disk or in memory**: It is possible to store data on disk or in ram. Genji relies on [Pebble](https://github.com/cockroachdb/pebble) to manage data.
