@@ -38,6 +38,20 @@ var (
 	errExitCtrlD = errors.New("ctrl-d")
 )
 
+// RestartShellError is returned when shell restart is needed (e.g. after restore command)
+type RestartShellError struct {
+	DbPath string
+}
+
+// NewRestartShellError creates new RestartShellError
+func NewRestartShellError(dbPath string) *RestartShellError {
+	return &RestartShellError{DbPath: dbPath}
+}
+
+func (e *RestartShellError) Error() string {
+	return "restart shell"
+}
+
 // A Shell manages a command line shell program for manipulating a Genji database.
 type Shell struct {
 	db   *genji.DB
@@ -192,7 +206,8 @@ func (sh *Shell) runExecutor(ctx context.Context, promptExecCh chan string) erro
 				fmt.Println()
 				continue
 			}
-			if errors.Is(err, errExitCommand) {
+			// exit or restart shell
+			if _, ok := err.(*RestartShellError); ok || errors.Is(err, errExitCommand) {
 				return err
 			}
 			if err != nil {
@@ -213,7 +228,7 @@ func (sh *Shell) runExecutor(ctx context.Context, promptExecCh chan string) erro
 // User input is sent to the execCh channel which must deal with parsing and error handling.
 // Once the execution of the user input is done by the reader of the channel, it must
 // send a string back to execCh so that this function will display another prompt.
-func (sh *Shell) runPrompt(ctx context.Context, execCh chan (string)) error {
+func (sh *Shell) runPrompt(ctx context.Context, execCh chan string) error {
 	sh.loadCommandSuggestions()
 	history, err := sh.loadHistory()
 	if err != nil {

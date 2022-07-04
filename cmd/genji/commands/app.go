@@ -47,21 +47,18 @@ func NewApp() *cli.App {
 
 	// Root command
 	app.Action = func(c *cli.Context) error {
-		dbpath := c.Args().First()
-
-		if dbutil.CanReadFromStandardInput() {
-			db, err := dbutil.OpenDB(c.Context, dbpath)
-			if err != nil {
+		dbPath := c.Args().First()
+		// Support shell restarts when shell.ErrRestartShell is returned
+		for {
+			err := MainAction(c.Context, dbPath)
+			restartShellError, ok := err.(*shell.RestartShellError)
+			// if no error is returned or the error is not a RestartShellError, then interrupt the action
+			if !ok || err == nil {
 				return err
 			}
-			defer db.Close()
-
-			return dbutil.ExecSQL(c.Context, db, os.Stdin, os.Stdout)
+			// in case of restarting the shell we need to point to right database directory
+			dbPath = restartShellError.DbPath
 		}
-
-		return shell.Run(c.Context, &shell.Options{
-			DBPath: dbpath,
-		})
 	}
 
 	app.After = func(c *cli.Context) error {
@@ -70,4 +67,20 @@ func NewApp() *cli.App {
 	}
 
 	return app
+}
+
+func MainAction(ctx context.Context, dbPath string) error {
+	if dbutil.CanReadFromStandardInput() {
+		db, err := dbutil.OpenDB(ctx, dbPath)
+		if err != nil {
+			return err
+		}
+		defer db.Close()
+
+		return dbutil.ExecSQL(ctx, db, os.Stdin, os.Stdout)
+	}
+
+	return shell.Run(ctx, &shell.Options{
+		DBPath: dbPath,
+	})
 }
